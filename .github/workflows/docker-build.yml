@@ -10,27 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH
+      - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: SSH into Oracle VM and deploy
+      - name: SSH into Oracle VM and deploy Docker app
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
-            # Create a temp folder for deployment
-            rm -rf github-actions-docker-project
+            # Clean old folder if any
+            rm -rf github-actions-docker-project || true
+
+            # Clone the latest code
             git clone https://github.com/${{ github.repository }}.git
             cd github-actions-docker-project
 
-            # Stop old container if running
+            # Stop and remove old container if running
             docker stop node-test-container || true
             docker rm node-test-container || true
 
-            # Build Docker image and run
+            # Build and run the new container
             docker build -t my-node-app .
             docker run -d -p 3000:3000 --name node-test-container my-node-app
           EOF
