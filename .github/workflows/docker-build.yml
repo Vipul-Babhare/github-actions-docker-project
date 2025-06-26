@@ -21,16 +21,22 @@ jobs:
       - name: SSH into Oracle VM and deploy Docker app
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
-            # Clean old folder if any
-            rm -rf github-actions-docker-project || true
+            # Kill any process using port 3000
+            sudo fuser -k 3000/tcp || true
 
-            # Clone the latest code
+            # Stop and remove existing container if it exists
+            sudo docker stop node-test-container || true
+            sudo docker rm node-test-container || true
+
+            # Optionally remove old image
+            sudo docker rmi my-node-app || true
+
+            # Clone latest code
+            rm -rf github-actions-docker-project || true
             git clone https://github.com/${{ github.repository }}.git
             cd github-actions-docker-project
 
-            # Stop and remove old container if running
-           sudo docker stop node-test-container || true
-           sudo docker rm node-test-container || true
-           sudo docker build -t my-node-app .
-           sudo docker run -d -p 3000:3000 --name node-test-container my-node-app
+            # Build and run new container
+            sudo docker build -t my-node-app .
+            sudo docker run -d -p 3000:3000 --name node-test-container my-node-app
           EOF
